@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-from draft_generator import generate_drafts  # noqa: E402
+from draft_generator import build_affiliate_block, generate_drafts  # noqa: E402
 from rakuten_api import RakutenAPIError, fetch_ranking, search_items  # noqa: E402
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -55,6 +55,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min-review-count", type=int, default=0, help="このレビュー件数未満の商品は除外")
     parser.add_argument("--min-review-average", type=float, default=0.0, help="この評価未満の商品は除外")
     parser.add_argument("--tags", help="カンマ区切りの追加ハッシュタグ (例: 加湿器,冬支度)")
+    parser.add_argument(
+        "--asin",
+        help="Amazon併記ブロックに使うASIN。全取得商品に同じASINが適用されるため、"
+        "--hits 1 など単一商品を取得する場合のみ指定してください。",
+    )
+    parser.add_argument(
+        "--amazon-tag",
+        help="Amazonアソシエイトのトラッキングタグ (省略時は環境変数 AMAZON_TAG を使用)",
+    )
     return parser
 
 
@@ -78,6 +87,7 @@ def write_outputs(rows: list[dict]) -> tuple[Path, Path]:
     fieldnames = [
         "rank", "item_name", "item_price", "review_average", "review_count",
         "affiliate_url", "draft_review", "draft_sale", "draft_simple", "draft_recommend",
+        "draft_affiliate_block",
     ]
     with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -99,6 +109,8 @@ def write_outputs(rows: list[dict]) -> tuple[Path, Path]:
             ]:
                 f.write(f"**{label}**\n\n")
                 f.write(f"```\n{row[key]}\n```\n\n")
+            f.write("**Amazon併記ブロック(コピペ用)**\n\n")
+            f.write(f"{row['draft_affiliate_block']}\n\n")
 
     return csv_path, md_path
 
@@ -139,6 +151,7 @@ def main() -> int:
     rows = []
     for item in items:
         drafts = generate_drafts(item, extra_tags=extra_tags)
+        affiliate_block = build_affiliate_block(item, asin=args.asin, amazon_tag=args.amazon_tag)
         rows.append(
             {
                 "rank": item.get("rank"),
@@ -151,6 +164,7 @@ def main() -> int:
                 "draft_sale": drafts["sale"],
                 "draft_simple": drafts["simple"],
                 "draft_recommend": drafts["recommend"],
+                "draft_affiliate_block": affiliate_block,
             }
         )
 

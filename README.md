@@ -16,6 +16,7 @@
 
 - ✅ 楽天市場の「ランキングAPI」「商品検索API」を使った商品リサーチの自動化
 - ✅ 商品情報(価格・レビュー・アフィリエイトリンク)をもとにした投稿キャプション下書きの自動生成
+- ✅ Amazonアソシエイトと楽天アフィリエイトを併記したMarkdownブロックの生成(広告表記付き)
 - ✅ CSV / Markdown での候補一覧の出力
 - ❌ 楽天ROOMへの自動投稿は行いません。楽天ROOMは投稿の自動化(bot投稿)や
   フォロワー・いいねの水増しを利用規約で禁止しているため、実際の投稿は
@@ -25,19 +26,23 @@
 
 1. [楽天ウェブサービス](https://webservice.rakuten.co.jp/) でアプリ登録し、アプリIDを取得する
    (無料・審査なしですぐ発行されます)。
-2. (任意) [楽天アフィリエイト](https://affiliate.rakuten.co.jp/) に登録するとアフィリエイトIDが
+2. `--mode search`(キーワード検索)を使う場合は、アクセスキーも取得して設定する。
+   商品検索APIは2026-07-01版で、アプリIDに加えてアクセスキーが必須になっている
+   (`--mode ranking` のみ使うならアクセスキーは不要)。
+3. (任意) [楽天アフィリエイト](https://affiliate.rakuten.co.jp/) に登録するとアフィリエイトIDが
    発行され、出力にアフィリエイトリンクを含められます。
-3. 依存パッケージをインストール:
+4. (任意) Amazon併記ブロックを使う場合は、Amazonアソシエイトのトラッキングタグを用意する。
+5. 依存パッケージをインストール:
 
    ```bash
    pip install -r requirements.txt
    ```
 
-4. `.env.example` を `.env` にコピーし、取得したIDを設定:
+6. `.env.example` を `.env` にコピーし、取得したIDを設定:
 
    ```bash
    cp .env.example .env
-   # RAKUTEN_APP_ID=xxxx を編集
+   # RAKUTEN_APP_ID=xxxx, RAKUTEN_ACCESS_KEY=xxxx などを編集
    ```
 
 ## 使い方
@@ -71,12 +76,16 @@ python src/main.py --mode search --keyword "加湿器" --sort -reviewCount --min
 | `--min-review-average` | この評価未満を除外 |
 | `--tags` | カンマ区切りの追加ハッシュタグ (例: `加湿器,冬支度`) |
 | `--hits` | 取得件数 |
+| `--asin` | Amazon併記ブロックに使うASIN。全取得商品に同じASINが適用されるため、`--hits 1` など単一商品取得時のみ指定 |
+| `--amazon-tag` | Amazonアソシエイトのトラッキングタグ(省略時は環境変数 `AMAZON_TAG` を使用) |
 
 ### 出力
 
 `output/drafts_YYYYMMDD_HHMMSS.csv` と `.md` に、商品ごとに4パターンの下書き
-(レビュー訴求・セール訴求・シンプル紹介・おすすめ訴求)が出力されます。
-気に入った文面を選んで、楽天ROOMアプリから商品を追加する際にキャプションとして貼り付けてください。
+(レビュー訴求・セール訴求・シンプル紹介・おすすめ訴求)と、Amazon併記のMarkdownブロック
+(広告表記付き)が出力されます。気に入った文面を選んで、楽天ROOMアプリから商品を追加する際に
+キャプションとして貼り付けてください。Amazon併記ブロックはnoteなど他媒体の記事にそのまま
+貼り付けられます。
 
 ---
 

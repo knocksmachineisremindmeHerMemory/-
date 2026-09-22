@@ -10,7 +10,9 @@ from typing import Any
 import requests
 
 RANKING_ENDPOINT = "https://app.rakuten.co.jp/services/api/IchibaItem/Ranking/20220601"
-SEARCH_ENDPOINT = "https://app.rakuten.co.jp/services/api/IchibaItem/Search/20220601"
+# 商品検索APIは2026-07-01版(ichibams)。旧版(app.rakuten.co.jp)はaccessKey不要だったが、
+# 新版はapplicationIdに加えてaccessKeyが必須になっている。
+SEARCH_ENDPOINT = "https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20260701"
 
 
 class RakutenAPIError(RuntimeError):
@@ -24,6 +26,17 @@ def _get_app_id() -> str:
             "RAKUTEN_APP_ID が設定されていません。.env に楽天デベロッパーズのアプリIDを設定してください。"
         )
     return app_id
+
+
+def _get_access_key() -> str:
+    access_key = os.environ.get("RAKUTEN_ACCESS_KEY", "").strip()
+    if not access_key:
+        raise RakutenAPIError(
+            "RAKUTEN_ACCESS_KEY が設定されていません。"
+            "商品検索API(2026-07-01版)ではapplicationIdに加えてアクセスキーが必須です。"
+            ".env に楽天デベロッパーズのアクセスキーを設定してください。"
+        )
+    return access_key
 
 
 def _normalize_item(raw_item: dict[str, Any], rank: int | None = None) -> dict[str, Any]:
@@ -92,8 +105,12 @@ def search_items(
 
     sort例: standard(標準) / -reviewCount(レビュー件数順) / -reviewAverage(評価順) / +itemPrice(価格が安い順)
     """
+    if not keyword and not genre_id:
+        raise RakutenAPIError("keyword か genre_id のどちらかを指定してください。")
+
     params: dict[str, Any] = {
         "applicationId": _get_app_id(),
+        "accessKey": _get_access_key(),
         "sort": sort,
         "hits": min(hits, 30),
         "format": "json",
@@ -110,9 +127,6 @@ def search_items(
     affiliate_id = os.environ.get("RAKUTEN_AFFILIATE_ID", "").strip()
     if affiliate_id:
         params["affiliateId"] = affiliate_id
-
-    if not keyword and not genre_id:
-        raise RakutenAPIError("keyword か genre_id のどちらかを指定してください。")
 
     resp = requests.get(SEARCH_ENDPOINT, params=params, timeout=15)
     if resp.status_code != 200:
