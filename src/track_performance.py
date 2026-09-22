@@ -69,9 +69,9 @@ def write_period_csv(summary: dict, out_path: Path) -> None:
             writer.writerow(row)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     csv_path = Path(args.csv)
     if not csv_path.exists():
