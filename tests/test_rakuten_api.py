@@ -12,6 +12,7 @@ import rakuten_api  # noqa: E402
 @pytest.fixture(autouse=True)
 def app_id_env(monkeypatch):
     monkeypatch.setenv("RAKUTEN_APP_ID", "dummy-app-id")
+    monkeypatch.setenv("RAKUTEN_ACCESS_KEY", "dummy-access-key")
     monkeypatch.delenv("RAKUTEN_AFFILIATE_ID", raising=False)
 
 
@@ -68,3 +69,36 @@ def test_fetch_ranking_raises_on_http_error():
     with patch("rakuten_api.requests.get", return_value=FakeResponse(403, "forbidden")):
         with pytest.raises(rakuten_api.RakutenAPIError):
             rakuten_api.fetch_ranking()
+
+
+def test_search_items_raises_without_access_key(monkeypatch):
+    monkeypatch.delenv("RAKUTEN_ACCESS_KEY", raising=False)
+    with pytest.raises(rakuten_api.RakutenAPIError):
+        rakuten_api.search_items(keyword="加湿器")
+
+
+def test_search_items_sends_access_key_and_normalizes_items():
+    fake_payload = {
+        "Items": [
+            {
+                "Item": {
+                    "itemName": "検索商品",
+                    "itemPrice": 1980,
+                    "shopName": "ショップB",
+                    "reviewCount": 10,
+                    "reviewAverage": 4.0,
+                    "itemUrl": "https://item.rakuten.co.jp/example/2/",
+                }
+            }
+        ]
+    }
+
+    with patch("rakuten_api.requests.get", return_value=FakeResponse(200, fake_payload)) as mock_get:
+        items = rakuten_api.search_items(keyword="加湿器")
+
+    assert mock_get.called
+    _, kwargs = mock_get.call_args
+    assert kwargs["params"]["accessKey"] == "dummy-access-key"
+    assert kwargs["params"]["applicationId"] == "dummy-app-id"
+    assert len(items) == 1
+    assert items[0]["item_name"] == "検索商品"
