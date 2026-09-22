@@ -109,6 +109,7 @@ Markdown/CSV/HTMLダッシュボードとして可視化します。
    - `performance_summary_*.md` — サマリー(累計・期間別・商品別・承認状況)
    - `performance_by_period_*.csv` — 期間別集計のCSV
    - `performance_dashboard_*.html` — グラフ付きダッシュボード(ブラウザで開く)
+   - `weekly_report_*.md` — `--weekly-report` 指定時のみ。直近週の前週比・日別推移をまとめた週次レポート
 
 ### 主なオプション
 
@@ -117,6 +118,7 @@ Markdown/CSV/HTMLダッシュボードとして可視化します。
 | `--csv` | 楽天アフィリエイト管理画面からダウンロードしたCSVのパス(必須) |
 | `--period` | 集計単位: day/week/month (デフォルト: month) |
 | `--top` | 商品別ランキングの表示件数 (デフォルト: 10) |
+| `--weekly-report` | データ中の最新週について、前週比・日別推移・商品別上位をまとめた週次レポート(Markdown)も出力する |
 
 ### CSVの列名が認識されない場合
 

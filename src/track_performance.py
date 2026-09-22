@@ -19,7 +19,8 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(__file__))
 
 from dashboard_builder import build_dashboard_html  # noqa: E402
-from report_analyzer import ReportParseError, build_summary, load_report_csv  # noqa: E402
+from report_analyzer import ReportParseError, build_summary, build_weekly_report, load_report_csv  # noqa: E402
+from weekly_report import format_weekly_report_markdown  # noqa: E402
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 COLUMN_CONFIG = ROOT_DIR / "src" / "report_columns.yaml"
@@ -31,6 +32,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--csv", required=True, help="楽天アフィリエイト管理画面からダウンロードしたCSVのパス")
     parser.add_argument("--period", default="month", choices=["day", "week", "month"], help="集計単位")
     parser.add_argument("--top", type=int, default=10, help="商品別ランキングの表示件数")
+    parser.add_argument(
+        "--weekly-report",
+        action="store_true",
+        help="直近週(データ中の最新週)の前週比・日別推移をまとめた週次レポートも出力する",
+    )
     return parser
 
 
@@ -104,6 +110,13 @@ def main() -> int:
     print(f"サマリー: {md_path}")
     print(f"期間別CSV: {csv_out_path}")
     print(f"ダッシュボード: {html_path} (ブラウザで開いて確認してください)")
+
+    if args.weekly_report:
+        weekly = build_weekly_report(records, top_n=args.top)
+        weekly_path = OUTPUT_DIR / f"weekly_report_{timestamp}.md"
+        weekly_path.write_text(format_weekly_report_markdown(weekly), encoding="utf-8")
+        print(f"週次レポート: {weekly_path}")
+
     return 0
 
 
