@@ -34,6 +34,7 @@ def _normalize_item(raw_item: dict[str, Any], rank: int | None = None) -> dict[s
 
     return {
         "rank": rank,
+        "item_code": raw_item.get("itemCode", ""),
         "item_name": raw_item.get("itemName", ""),
         "item_price": raw_item.get("itemPrice", ""),
         "shop_name": raw_item.get("shopName", ""),
@@ -125,3 +126,39 @@ def search_items(
         raw_item = entry.get("Item", entry)
         items.append(_normalize_item(raw_item, rank=i))
     return items
+
+
+def get_genre_stats(genre_id: str, sample_size: int = 30) -> dict[str, Any]:
+    """ジャンル内の総商品数と、レビュー件数上位サンプルの平均値を取得する。
+
+    「競合の少なさ」を判定する公式な指標は楽天から提供されていないため、
+    総商品数(supply)とレビュー件数上位のレビュー数・価格(需要/成熟度)を
+    参考値として返す。あくまで目安であることに注意。
+    """
+    params = {
+        "applicationId": _get_app_id(),
+        "genreId": genre_id,
+        "sort": "-reviewCount",
+        "hits": min(sample_size, 30),
+        "format": "json",
+    }
+
+    resp = requests.get(SEARCH_ENDPOINT, params=params, timeout=15)
+    if resp.status_code != 200:
+        raise RakutenAPIError(f"検索API呼び出しに失敗しました ({resp.status_code}): {resp.text}")
+
+    data = resp.json()
+    raw_items = data.get("Items", [])
+    items = [_normalize_item(entry.get("Item", entry)) for entry in raw_items]
+
+    review_counts = [i["review_count"] for i in items if isinstance(i["review_count"], (int, float))]
+    prices = [i["item_price"] for i in items if isinstance(i["item_price"], (int, float))]
+
+    return {
+        "genre_id": genre_id,
+        "total_item_count": data.get("count", 0),
+        "sample_size": len(items),
+        "avg_review_count": sum(review_counts) / len(review_counts) if review_counts else 0,
+        "avg_price": sum(prices) / len(prices) if prices else 0,
+        "top_items": items[:5],
+    }
