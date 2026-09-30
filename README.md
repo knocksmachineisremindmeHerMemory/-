@@ -9,6 +9,27 @@
 5. **コンテンツ一式生成 & NGワードチェック** (`src/generate_content.py`) — 紹介記事・Threads投稿文を複数パターン生成し、誇大表現/表示義務漏れをチェック
 6. **投稿カレンダー & リマインド** (`src/generate_calendar.py`) — ポイント高還元日・セール期間の投稿タイミングをカレンダー化
 
+## 統合CLI
+
+`src/cli.py` からサブコマンド経由で3ツールすべてを実行できます(各ツールを個別に直接
+実行する方法は従来どおり利用可能です)。
+
+```bash
+python src/cli.py research --mode ranking --genre コスメ --hits 10
+python src/cli.py track --csv path/to/report.csv --period month
+python src/cli.py calendar --days 30
+```
+
+サブコマンドごとのオプションは、それぞれ以下と同じです(詳細は各ツールの節を参照)。
+
+| サブコマンド | 相当するツール |
+|---|---|
+| `research` | `python src/main.py` |
+| `track` | `python src/track_performance.py` |
+| `calendar` | `python src/generate_calendar.py` |
+
+オプション一覧は `python src/cli.py <サブコマンド> --help` で確認できます。
+
 ---
 
 # 1. 商品リサーチ & 投稿下書き生成ツール

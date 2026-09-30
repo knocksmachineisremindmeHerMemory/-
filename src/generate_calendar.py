@@ -66,9 +66,9 @@ def write_csv(grouped: dict[date, list[dict]], out_path: Path) -> None:
             writer.writerow([d.isoformat(), names, notes])
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if bool(args.date_from) != bool(args.date_to):
         print("--from と --to は両方指定してください。", file=sys.stderr)

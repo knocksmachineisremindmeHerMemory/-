@@ -103,10 +103,10 @@ def write_outputs(rows: list[dict]) -> tuple[Path, Path]:
     return csv_path, md_path
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     load_dotenv(ROOT_DIR / ".env")
     parser = build_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     extra_tags = [t.strip() for t in args.tags.split(",")] if args.tags else None
 
