@@ -68,3 +68,21 @@ def test_fetch_ranking_raises_on_http_error():
     with patch("rakuten_api.requests.get", return_value=FakeResponse(403, "forbidden")):
         with pytest.raises(rakuten_api.RakutenAPIError):
             rakuten_api.fetch_ranking()
+
+
+def test_get_genre_stats_computes_averages():
+    fake_payload = {
+        "count": 12345,
+        "Items": [
+            {"Item": {"itemName": "A", "itemPrice": 1000, "reviewCount": 100}},
+            {"Item": {"itemName": "B", "itemPrice": 2000, "reviewCount": 200}},
+        ],
+    }
+
+    with patch("rakuten_api.requests.get", return_value=FakeResponse(200, fake_payload)):
+        stats = rakuten_api.get_genre_stats("100939", sample_size=30)
+
+    assert stats["total_item_count"] == 12345
+    assert stats["sample_size"] == 2
+    assert stats["avg_review_count"] == 150
+    assert stats["avg_price"] == 1500
