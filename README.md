@@ -6,6 +6,7 @@
 2. **成果トラッキング & ダッシュボード** (`src/track_performance.py`) — アフィリエイト成果レポートを集計し、ダッシュボード化
 3. **伸びている商品の検出 & 検索キーワード出し** (`src/research_trends.py`) — ランキングの順位変動を追跡し、急上昇・新規ランクイン商品と検索キーワード候補を抽出
 4. **競合カテゴリ比較(参考値)** (`src/find_low_competition_categories.py`) — ジャンル別の出品数・レビュー数を比較し、競合が少なそうなカテゴリの目安を提示
+5. **コンテンツ一式生成 & NGワードチェック** (`src/generate_content.py`) — 紹介記事・Threads投稿文を複数パターン生成し、誇大表現/表示義務漏れをチェック
 
 ---
 
@@ -183,6 +184,56 @@ python src/find_low_competition_categories.py --genres コスメ,生活雑貨,�
 
 `--genres` にはカンマ区切りでジャンル名(`src/genres.yaml`参照)またはジャンルIDを指定します。
 `output/` に比較結果(CSV/Markdown)が出力されます。
+
+---
+
+# 5. コンテンツ一式生成 & NGワードチェックツール
+
+商品リサーチ結果から、ROOM投稿下書き・紹介記事(ブログ形式)・Threads投稿文(複数パターン)を
+まとめて生成し、生成した全テキストに対して誇大表現・表示義務漏れをチェックします。
+
+## できること / できないこと
+
+- ✅ 紹介記事(Markdown形式の見出し付き記事下書き)の自動生成
+- ✅ Threads投稿文を4パターン(共感型/質問型/悩み解決型/ランキング訴求型)自動生成
+- ✅ 誇大・薬機法/景品表示法上リスクのある表現のNGワードチェック
+- ✅ 助詞の連続などの簡易的な誤字チェック
+- ✅ Threads/X投稿における広告表示義務(ステマ規制、2023年施行)のチェック
+  — デフォルトで生成するThreads投稿文に `#PR` を自動付与します
+- ⚠️ 本格的な日本語の誤字・脱字検出(スペルチェック)は行いません。誇大表現・表示義務・
+  簡易的な誤字パターンのチェックに絞っています。最終的な文章の確認は自身で行ってください。
+- ⚠️ NGワードリスト(`src/ng_words.yaml`)は一般的なリスク表現の例であり、法令適合を保証するもの
+  ではありません。実際の投稿前に自身で確認するか、必要に応じて専門家に相談してください。
+
+## 使い方
+
+```bash
+# ランキングから上位5件を対象にコンテンツを生成
+python src/generate_content.py --mode ranking --genre コスメ --hits 5
+
+# キーワード検索から生成
+python src/generate_content.py --mode search --keyword "加湿器" --hits 5
+```
+
+`output/content_YYYYMMDD_HHMMSS/` 以下に、商品ごとのフォルダ
+(`room_captions.md` / `article.md` / `threads_posts.md` / `keywords.txt`)と、
+全商品分のチェック結果をまとめた `check_report.csv` が出力されます。
+
+### 主なオプション
+
+| オプション | 説明 |
+|---|---|
+| `--mode` | `ranking` or `search` |
+| `--genre` / `--keyword` | 商品リサーチ条件(`src/main.py`と同様) |
+| `--hits` | 対象商品数(コンテンツを多数生成するため少なめ推奨、デフォルト5) |
+| `--tags` | カンマ区切りの追加ハッシュタグ |
+| `--no-disclosure` | Threads投稿の`#PR`表記を付けない(法令リスクを理解した上でのみ使用) |
+
+### NGワードリストの編集
+
+`src/ng_words.yaml` を編集してください。`overclaim`(誇大表現の候補)、
+`disclosure_required_platforms`/`disclosure_keywords`(広告表示義務チェック対象)、
+`particle_repeat_check`(助詞連続チェック対象)を管理しています。
 
 ---
 
