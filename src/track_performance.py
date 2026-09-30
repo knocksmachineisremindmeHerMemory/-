@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(__file__))
 
 from dashboard_builder import build_dashboard_html  # noqa: E402
+from improvement_suggester import build_suggestions  # noqa: E402
 from report_analyzer import ReportParseError, build_summary, load_report_csv  # noqa: E402
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -59,6 +60,10 @@ def write_markdown(summary: dict, out_path: Path) -> None:
         f.write("| 状態 | 件数 |\n|---|---:|\n")
         for status, count in summary["status_breakdown"].items():
             f.write(f"| {status} | {count} |\n")
+
+        f.write("\n## 改善案\n\n")
+        for suggestion in build_suggestions(summary):
+            f.write(f"- {suggestion}\n")
 
 
 def write_period_csv(summary: dict, out_path: Path) -> None:
@@ -104,6 +109,9 @@ def main() -> int:
     print(f"サマリー: {md_path}")
     print(f"期間別CSV: {csv_out_path}")
     print(f"ダッシュボード: {html_path} (ブラウザで開いて確認してください)")
+    print("改善案:")
+    for suggestion in build_suggestions(summary):
+        print(f"  - {suggestion}")
     return 0
 
 
