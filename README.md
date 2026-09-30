@@ -7,6 +7,7 @@
 3. **伸びている商品の検出 & 検索キーワード出し** (`src/research_trends.py`) — ランキングの順位変動を追跡し、急上昇・新規ランクイン商品と検索キーワード候補を抽出
 4. **競合カテゴリ比較(参考値)** (`src/find_low_competition_categories.py`) — ジャンル別の出品数・レビュー数を比較し、競合が少なそうなカテゴリの目安を提示
 5. **コンテンツ一式生成 & NGワードチェック** (`src/generate_content.py`) — 紹介記事・Threads投稿文を複数パターン生成し、誇大表現/表示義務漏れをチェック
+6. **投稿カレンダー & リマインド** (`src/generate_calendar.py`) — ポイント高還元日・セール期間の投稿タイミングをカレンダー化
 
 ---
 
@@ -246,6 +247,56 @@ python src/generate_content.py --mode search --keyword "加湿器" --hits 5
 `src/ng_words.yaml` を編集してください。`overclaim`(誇大表現の候補)、
 `disclosure_required_platforms`/`disclosure_keywords`(広告表示義務チェック対象)、
 `particle_repeat_check`(助詞連続チェック対象)を管理しています。
+
+---
+
+# 6. 投稿カレンダー & リマインドツール
+
+ポイント高還元日(5と0のつく日など)やセールキャンペーン期間をもとに、投稿タイミングの
+カレンダーを生成します。Markdown/CSVに加えて、カレンダーアプリに取り込める`.ics`ファイル
+(前日リマインド付き)も出力します。
+
+## できること / できないこと
+
+- ✅ 毎月固定で繰り返されるイベント(5と0のつく日、ワンダフルデー等)の自動計算
+- ✅ Markdown/CSV/ICS形式での投稿カレンダー出力
+- ✅ `.ics`をGoogleカレンダー等に取り込めば、前日リマインド通知を受け取れる
+- ❌ 楽天スーパーSALEやお買い物マラソンの開催日程を自動取得することはできません。
+  これらは楽天が都度アナウンスする不定期キャンペーンで公開APIも無いため、
+  `src/events_config.yaml` の `campaigns` に発表され次第手動で日程を追記する運用です。
+  追記後は、その期間分のカレンダー生成・リマインド設定は自動化されます。
+
+## 使い方
+
+```bash
+# 今日から30日分(デフォルト)を生成
+python src/generate_calendar.py
+
+# 日数を指定
+python src/generate_calendar.py --days 60
+
+# 期間を指定
+python src/generate_calendar.py --from 2026-10-01 --to 2026-10-31
+```
+
+`output/` に以下が出力されます:
+- `posting_calendar_*.md` — カレンダー表(日付・イベント・メモ)
+- `posting_calendar_*.csv` — 同内容のCSV
+- `posting_calendar_*.ics` — カレンダーアプリ取り込み用(前日9時等にリマインド)
+
+### 主なオプション
+
+| オプション | 説明 |
+|---|---|
+| `--days` | 今日から何日分を生成するか (デフォルト30) |
+| `--from` / `--to` | 期間を直接指定 (YYYY-MM-DD、両方セットで指定) |
+| `--reminder-days-before` | ICSのリマインドを何日前にするか (デフォルト1) |
+
+### イベントの追加・編集
+
+`src/events_config.yaml` を編集してください。
+- `recurring`: 毎月同じ日に繰り返すイベント(`day_of_month_in`ルールで日付リストを指定)
+- `campaigns`: 開始日・終了日を指定する不定期キャンペーン(楽天スーパーSALE等、発表され次第追記)
 
 ---
 
