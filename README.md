@@ -8,6 +8,7 @@
 4. **競合カテゴリ比較(参考値)** (`src/find_low_competition_categories.py`) — ジャンル別の出品数・レビュー数を比較し、競合が少なそうなカテゴリの目安を提示
 5. **コンテンツ一式生成 & NGワードチェック** (`src/generate_content.py`) — 紹介記事・Threads投稿文を複数パターン生成し、誇大表現/表示義務漏れをチェック
 6. **投稿カレンダー & リマインド** (`src/generate_calendar.py`) — ポイント高還元日・セール期間の投稿タイミングをカレンダー化
+7. **Threads自動投稿** (`src/post_to_threads.py`) — Threads API経由で投稿文を自動投稿(NGワードチェック連動、既定はドライラン)
 
 ---
 
@@ -297,6 +298,54 @@ python src/generate_calendar.py --from 2026-10-01 --to 2026-10-31
 `src/events_config.yaml` を編集してください。
 - `recurring`: 毎月同じ日に繰り返すイベント(`day_of_month_in`ルールで日付リストを指定)
 - `campaigns`: 開始日・終了日を指定する不定期キャンペーン(楽天スーパーSALE等、発表され次第追記)
+
+---
+
+# 7. Threads自動投稿ツール
+
+Meta公式のThreads APIを使って、生成した投稿文をThreadsに直接投稿します。
+
+## できること / できないこと
+
+- ✅ Threads APIへの「コンテナ作成 → 公開」の2段階投稿フローを実装
+- ✅ 投稿前にNGワード/文字数/開示表記チェックを自動実行し、問題があれば投稿を止める
+- ✅ 既定では実際には投稿しない「ドライラン」。`--yes`を明示した場合のみ実際に投稿する
+- ❌ Meta Developerアプリの作成・Threadsアカウント連携・アクセストークン取得は
+  このツールでは自動化できません。Meta側のOAuth同意フローはユーザー自身の操作が必要です。
+
+## 事前準備(ユーザー自身の作業)
+
+1. [Meta for Developers](https://developers.facebook.com/) でアプリを作成
+2. アプリに「Threads API」プロダクトを追加し、投稿したいThreadsアカウントを連携
+3. OAuth同意フローを完了し、長期アクセストークンを取得する
+   (スコープ: `threads_basic`, `threads_content_publish`)
+4. `.env` に以下を設定:
+   ```
+   THREADS_USER_ID=...
+   THREADS_ACCESS_TOKEN=...
+   ```
+
+## 使い方
+
+```bash
+# ドライラン(内容とチェック結果だけ確認、実際には投稿しない)
+python src/post_to_threads.py --text "投稿したい本文 #PR #楽天ROOM"
+
+# src/generate_content.py が生成したファイルからパターンを指定して読み込む
+python src/post_to_threads.py --file output/content_xxx/01_商品名/threads_posts.md --pattern empathy
+
+# 実際に投稿する(認証情報が設定済みの場合)
+python src/post_to_threads.py --text "投稿したい本文 #PR #楽天ROOM" --yes
+```
+
+### 主なオプション
+
+| オプション | 説明 |
+|---|---|
+| `--text` | 投稿する本文を直接指定 |
+| `--file` / `--pattern` | `generate_content.py`が生成したthreads_posts.mdと、使用するパターン名 |
+| `--yes` | 実際に投稿する(省略時はドライランのみ) |
+| `--force` | NGワード/開示チェックで問題が見つかっても投稿を強行する |
 
 ---
 
