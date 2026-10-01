@@ -315,15 +315,53 @@ Meta公式のThreads APIを使って、生成した投稿文をThreadsに直接�
 
 ## 事前準備(ユーザー自身の作業)
 
-1. [Meta for Developers](https://developers.facebook.com/) でアプリを作成
-2. アプリに「Threads API」プロダクトを追加し、投稿したいThreadsアカウントを連携
-3. OAuth同意フローを完了し、長期アクセストークンを取得する
-   (スコープ: `threads_basic`, `threads_content_publish`)
-4. `.env` に以下を設定:
+ブラウザでのログイン・同意操作が必要なため、ステップ1〜5は自分で行う必要があります。
+ステップ6(認証コード→アクセストークンの交換)は `src/threads_auth.py` で自動化できます。
+
+1. **Meta Developerアプリを作成**
+   [Meta for Developers](https://developers.facebook.com/apps/create/) にアクセスし、
+   Facebookアカウントでログインしてアプリを作成する(アプリの種類は「ビジネス」等を選択)。
+
+2. **Threads APIプロダクトを追加**
+   作成したアプリのダッシュボードから「製品を追加」→「Threads API」を追加する。
+   これで `Threads App ID` と `Threads App Secret` が発行される。
+
+3. **リダイレクトURIを設定**
+   Threads API設定画面で「リダイレクトURI」を登録する。実際にサーバーを立てる必要はなく、
+   `https://localhost/` のような任意のURLでよい(認証後にこのURLへ`code`付きでリダイレクトされる)。
+
+4. **認証URLにアクセスして同意**
+   以下のURLの `{APP_ID}` と `{REDIRECT_URI}` を置き換えてブラウザで開き、
+   自分のThreadsアカウントでログイン・同意する:
+   ```
+   https://threads.net/oauth/authorize?client_id={APP_ID}&redirect_uri={REDIRECT_URI}&scope=threads_basic,threads_content_publish&response_type=code
+   ```
+   同意後、ブラウザが `{REDIRECT_URI}?code=XXXXX` にリダイレクトされる。
+   アドレスバーに表示されたURLから `code=` 以降の値をコピーする
+   (`#_` が付いている場合はそれより前の部分だけを使う)。
+
+5. **App IDとApp Secretを確認**
+   アプリダッシュボードの「設定」→「ベーシック」、またはThreads API設定画面で確認できる。
+
+6. **認証コードを長期アクセストークンに交換(ここは自動化済み)**
+   ```bash
+   python src/threads_auth.py \
+     --client-id <Threads App ID> \
+     --client-secret <Threads App Secret> \
+     --redirect-uri <ステップ3で設定したリダイレクトURI> \
+     --code <ステップ4で取得したcode>
+   ```
+   成功すると `THREADS_USER_ID` と `THREADS_ACCESS_TOKEN`(60日間有効)が表示されるので、
+   `.env` に設定する:
    ```
    THREADS_USER_ID=...
    THREADS_ACCESS_TOKEN=...
    ```
+   長期トークンは60日で失効するため、期限が近づいたらステップ4〜6を再実行して更新する。
+
+⚠️ `code`は1回しか使えず、発行後すぐに失効します。ステップ4のあと、間を置かずに
+ステップ6を実行してください。また `client_secret` や `code` は第三者に漏らさないよう
+注意してください(このリポジトリにコミットしない、チャット等に貼ったままにしない)。
 
 ## 使い方
 
