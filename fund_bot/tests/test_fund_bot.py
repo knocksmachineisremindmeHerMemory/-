@@ -105,3 +105,82 @@ def test_slippage_logged(tmp_path):
     b.enter("s", "BTC", "buy", 100, 98, NOW)
     r = list(csv.DictReader(open(tmp_path / "trades.csv")))[0]
     assert D(r["slippage"]) == D("0.0005") and D(r["fees"]) > 0
+
+# --- exits and P&L ---
+def rows(tmp_path):
+    return list(csv.DictReader(open(tmp_path / "trades.csv")))
+
+def test_stop_out_records_loss_in_R(tmp_path):
+    ex2 = MockExchange(fee_rate="0", slip="0")
+    b = Bot(ex2, L, RULES, log_path=str(tmp_path / "t.csv"))
+    b.enter("s", "BTC", "buy", 100, 98, NOW)
+    ex2.trigger_price(D("98"))
+    assert b.sync(NOW) == [1]
+    r = list(csv.DictReader(open(tmp_path / "t.csv")))[0]
+    assert D(r["pnl"]) == D("-100") and D(r["r_multiple"]) == D("-1")   # exactly the 1% risk
+    assert D(r["exit_price"]) == D("98") and r["reason_out"] == "stop"
+    assert ex2.equity == D("9900") and b.open == {}
+
+def test_fees_included_in_pnl(tmp_path):
+    b = Bot(MockExchange(fee_rate="0.001", slip="0"), L, RULES, log_path=str(tmp_path / "t.csv"))
+    b.enter("s", "BTC", "buy", 100, 98, NOW)
+    b.ex.trigger_price(D("98")); b.sync(NOW)
+    r = list(csv.DictReader(open(tmp_path / "t.csv")))[0]
+    qty = D(r["size"])
+    assert D(r["fees"]) == qty * D("100") * D("0.001") + qty * D("98") * D("0.001")
+    assert D(r["pnl"]) == -qty * 2 - D(r["fees"])
+    assert D(r["r_multiple"]) < -1          # fees push the loss past 1R
+
+def test_gap_through_stop_fills_worse(tmp_path):
+    ex = MockExchange(fee_rate="0", slip="0")
+    b = Bot(ex, L, RULES, log_path=str(tmp_path / "t.csv"))
+    b.enter("s", "BTC", "buy", 100, 98, NOW)
+    ex.trigger_price(D("95")); b.sync(NOW)
+    r = list(csv.DictReader(open(tmp_path / "t.csv")))[0]
+    assert D(r["exit_price"]) == D("95") and D(r["r_multiple"]) == D("-2.5")
+
+def test_short_winner_manual_close_cancels_stop(tmp_path):
+    ex = MockExchange(fee_rate="0", slip="0")
+    b = Bot(ex, L, RULES, log_path=str(tmp_path / "t.csv"))
+    b.enter("s", "BTC", "sell", 100, 102, NOW)
+    b.close(1, 96, NOW)
+    r = list(csv.DictReader(open(tmp_path / "t.csv")))[0]
+    assert D(r["pnl"]) == D("200") and D(r["r_multiple"]) == D("2") and r["reason_out"] == "manual"
+    assert ex.open_stops() == []
+
+def test_funding_reduces_pnl(tmp_path):
+    ex = MockExchange(fee_rate="0", slip="0")
+    b = Bot(ex, L, RULES, log_path=str(tmp_path / "t.csv"))
+    b.enter("s", "BTC", "buy", 100, 98, NOW)
+    b.add_funding(1, "5")
+    b.close(1, 100, NOW)
+    r = list(csv.DictReader(open(tmp_path / "t.csv")))[0]
+    assert D(r["pnl"]) == D("-5") and D(r["funding"]) == D("5")
+
+def test_open_trade_row_stays_blank_until_exit(tmp_path):
+    ex, b = mk(tmp_path)
+    b.enter("s", "BTC", "buy", 100, 98, NOW)
+    b.sync(NOW)                              # stop not hit: nothing recorded
+    r = rows(tmp_path)[0]
+    assert r["pnl"] == "" and r["exit_time"] == "" and 1 in b.open
+
+def test_consecutive_stop_outs_hit_daily_limit(tmp_path):
+    ex = MockExchange(fee_rate="0", slip="0")
+    b = Bot(ex, L, RULES, log_path=str(tmp_path / "t.csv"))
+    for i in range(3):
+        b.enter("s", "BTC", "buy", 100, 98, NOW)
+        ex.trigger_price(D("98")); b.sync(NOW)
+    # 3 x ~1% of a shrinking equity is just under -3%: still allowed, a 4th loss is not
+    assert ex.equity > D("9700")
+    b.enter("s", "BTC", "buy", 100, 98, NOW); ex.trigger_price(D("98")); b.sync(NOW)
+    with pytest.raises(Reject): b.enter("s", "BTC", "buy", 100, 98, NOW)
+    assert "DAILY_LIMIT" in b.alerts
+    b.new_day()
+    b.enter("s", "BTC", "buy", 100, 98, NOW)  # next UTC day: allowed again
+
+def test_equity_high_water_updates_on_win(tmp_path):
+    ex = MockExchange(fee_rate="0", slip="0")
+    b = Bot(ex, L, RULES, log_path=str(tmp_path / "t.csv"))
+    b.enter("s", "BTC", "buy", 100, 98, NOW)
+    b.close(1, 104, NOW)
+    assert b.high == ex.equity == D("10200")

@@ -44,5 +44,10 @@ class MockExchange:
         for o in self.open_stops():
             hit = price <= o["price"] if o["side"] == "sell" else price >= o["price"]
             if hit:
-                o.update(status="filled", fill_price=o["price"], fee=o["qty"] * o["price"] * self.fee_rate)
+                # a gap through the stop fills at the worse (market) price, never better than the stop
+                fill = min(o["price"], price) if o["side"] == "sell" else max(o["price"], price)
+                o.update(status="filled", fill_price=fill, fee=o["qty"] * fill * self.fee_rate)
                 self.position = None
+
+    def settle(self, pnl):
+        self.equity += pnl
