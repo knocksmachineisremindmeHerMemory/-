@@ -87,6 +87,16 @@ python src/main.py --mode search --keyword "加湿器" --sort -reviewCount --min
 キャプションとして貼り付けてください。Amazon併記ブロックはnoteなど他媒体の記事にそのまま
 貼り付けられます。
 
+## Amazonアソシエイト単体で使う(楽天不要)
+
+楽天のAPIキーなしで、ASINやキーワードからタグ付きリンク(広告表記付き)を作れます。
+
+```bash
+export AMAZON_TAG=xxxx-22
+python src/amazon_affiliate.py --asin B0XXXXXXXX --title "商品名"
+python src/amazon_affiliate.py --keyword "加湿器"
+```
+
 ---
 
 # 2. 成果トラッキング & ダッシュボード生成ツール
