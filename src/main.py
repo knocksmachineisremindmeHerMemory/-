@@ -151,7 +151,9 @@ def main() -> int:
     rows = []
     for item in items:
         drafts = generate_drafts(item, extra_tags=extra_tags)
-        affiliate_block = build_affiliate_block(item, asin=args.asin, amazon_tag=args.amazon_tag)
+        affiliate_block = build_affiliate_block(
+            item, asin=args.asin, amazon_tag=args.amazon_tag, search_keyword=args.keyword
+        )
         rows.append(
             {
                 "rank": item.get("rank"),

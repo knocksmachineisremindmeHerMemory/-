@@ -16,7 +16,7 @@
 
 - ✅ 楽天市場の「ランキングAPI」「商品検索API」を使った商品リサーチの自動化
 - ✅ 商品情報(価格・レビュー・アフィリエイトリンク)をもとにした投稿キャプション下書きの自動生成
-- ✅ Amazonアソシエイトと楽天アフィリエイトを併記したMarkdownブロックの生成(広告表記付き)
+- ✅ Amazonアソシエイトと楽天アフィリエイトを併記したMarkdownブロックの生成(広告表記付き)(ASIN未指定でもタグ付きAmazon検索リンクを出力)
 - ✅ CSV / Markdown での候補一覧の出力
 - ❌ 楽天ROOMへの自動投稿は行いません。楽天ROOMは投稿の自動化(bot投稿)や
   フォロワー・いいねの水増しを利用規約で禁止しているため、実際の投稿は
@@ -86,6 +86,16 @@ python src/main.py --mode search --keyword "加湿器" --sort -reviewCount --min
 (広告表記付き)が出力されます。気に入った文面を選んで、楽天ROOMアプリから商品を追加する際に
 キャプションとして貼り付けてください。Amazon併記ブロックはnoteなど他媒体の記事にそのまま
 貼り付けられます。
+
+## Amazonアソシエイト単体で使う(楽天不要)
+
+楽天のAPIキーなしで、ASINやキーワードからタグ付きリンク(広告表記付き)を作れます。
+
+```bash
+export AMAZON_TAG=xxxx-22
+python src/amazon_affiliate.py --asin B0XXXXXXXX --title "商品名"
+python src/amazon_affiliate.py --keyword "加湿器"
+```
 
 ---
 
