@@ -63,3 +63,18 @@ def test_build_affiliate_block_without_disclosure():
     block = build_affiliate_block(item, disclosure=False)
 
     assert "広告" not in block
+
+
+def test_build_affiliate_block_search_link_without_asin(monkeypatch):
+    monkeypatch.delenv("AMAZON_TAG", raising=False)
+    item = {"item_name": "加湿器 卓上", "affiliate_url": "https://example.com/r"}
+    block = build_affiliate_block(item, amazon_tag="test-tag-22")
+    assert "https://www.amazon.co.jp/s?k=%E5%8A%A0%E6%B9%BF%E5%99%A8" in block
+    assert "tag=test-tag-22" in block
+
+
+def test_build_affiliate_block_invalid_asin():
+    import pytest
+
+    with pytest.raises(ValueError):
+        build_affiliate_block({"item_name": "x"}, asin="bad", amazon_tag="t-22")

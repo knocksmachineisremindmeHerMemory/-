@@ -2,7 +2,11 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
+from urllib.parse import quote
+
+_ASIN_RE = re.compile(r"[A-Z0-9]{10}")
 
 _TEMPLATES = [
     (
@@ -69,11 +73,14 @@ def build_affiliate_block(
     asin: str | None = None,
     amazon_tag: str | None = None,
     disclosure: bool = True,
+    search_keyword: str | None = None,
 ) -> str:
     """Amazon併記の楽天アフィリエイトMarkdownブロックを生成する。
 
     asinを指定するとAmazonリンクも併記する。amazon_tag省略時は環境変数
     AMAZON_TAG を使用する(どちらも無ければAmazonリンクは省略される)。
+    asin未指定でタグがある場合は、search_keyword(省略時は商品名の先頭部分)で
+    Amazon検索結果ページへのタグ付きリンクを出す(ASINは楽天商品と一致しないため)。
     disclosure=Trueの場合、ステマ規制対応の広告表記を末尾に付ける。
     """
     tag = amazon_tag or os.environ.get("AMAZON_TAG", "").strip()
@@ -81,8 +88,16 @@ def build_affiliate_block(
     rakuten_url = item.get("affiliate_url", "")
 
     links = []
-    if asin and tag:
-        links.append(f"[🛒 Amazonで見る](https://www.amazon.co.jp/dp/{asin}?tag={tag})")
+    if asin and not _ASIN_RE.fullmatch(asin):
+        raise ValueError(f"ASINの形式が不正です(英数字10桁): {asin!r}")
+    if tag and asin:
+        links.append(f"[🛒 Amazonで見る](https://www.amazon.co.jp/dp/{asin}?tag={quote(tag)})")
+    elif tag:
+        kw = (search_keyword or title)[:40].strip()
+        if kw:
+            links.append(
+                f"[🛒 Amazonで探す](https://www.amazon.co.jp/s?k={quote(kw)}&tag={quote(tag)})"
+            )
     if rakuten_url:
         links.append(f"[🛍️ 楽天で見る]({rakuten_url})")
 
